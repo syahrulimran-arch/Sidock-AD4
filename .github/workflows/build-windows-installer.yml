@@ -1,0 +1,56 @@
+name: Build Windows installer
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Miniforge
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          activate-environment: sidock-build
+          python-version: "3.11"
+          channels: conda-forge
+          channel-priority: strict
+
+      - name: Install scientific and build dependencies
+        run: |
+          conda install -y -c conda-forge rdkit pyside6 numpy scipy gemmi openbabel pytest pyinstaller pyinstaller-hooks-contrib pip
+          python -m pip install --disable-pip-version-check "meeko>=0.6,<0.8"
+          python -m pip install --disable-pip-version-check --no-deps .
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: Freeze application
+        run: |
+          pyinstaller --noconfirm --clean --distpath dist --workpath .build/pyinstaller packaging/SIDock.spec
+          Copy-Item -Force "$env:CONDA_PREFIX\Library\bin\*.dll" "dist\SIDock\_internal\"
+          & "dist\SIDock\SIDock.exe" --self-test
+          if ($LASTEXITCODE -ne 0) { throw "Packaged runtime self-test failed" }
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Compile Setup EXE
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" packaging\installer\SIDock.iss'
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIDock_AD4_Setup_v0.7.6
+          path: dist/installer/SIDock_AD4_Setup_v0.7.6.exe
+          if-no-files-found: error

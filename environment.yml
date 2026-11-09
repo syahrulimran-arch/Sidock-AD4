@@ -1,0 +1,14 @@
+name: sidock
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - rdkit
+  - pyside6
+  - numpy
+  - scipy
+  - gemmi
+  - openbabel
+  - pip
+  - pip:
+      - meeko>=0.6

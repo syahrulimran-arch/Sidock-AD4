@@ -1,0 +1,24 @@
+SIDock AD4 0.7.6 - Third-party notices
+=========================================
+
+The Windows distribution contains open-source runtime components, including
+Python, PySide6/Qt, RDKit, Meeko, NumPy, SciPy, Gemmi, and Open Babel. Each
+component remains subject to its own license. License metadata and source links
+are available from the corresponding upstream projects and conda-forge package
+records.
+
+Open Babel is distributed under the GNU General Public License, version 2.
+Project and source: https://openbabel.org/
+
+The Windows distribution includes libomp140.x86_64.dll, the LLVM OpenMP
+runtime, obtained from the Microsoft.Quantum.Simulators 0.28.263081 package
+published by Microsoft on NuGet under the MIT license. LLVM OpenMP is part of
+the LLVM Project and is distributed under the Apache License 2.0 with LLVM
+Exceptions.
+Package: https://www.nuget.org/packages/Microsoft.Quantum.Simulators/0.28.263081
+LLVM licensing: https://llvm.org/foundation/relicensing/LICENSE.txt
+Bundled DLL SHA-256: 009b3aabfad6c4ccdd395b1befff744c141e51b2c124ca24c36f6d4631365cef
+
+SIDock does not include AutoGrid4, AutoDock4, AutoDock-GPU, AutoDockTools, or MGLTools.
+AutoDock-GPU: https://github.com/ccsb-scripps/AutoDock-GPU (GNU GPL v2).
+Users supply those executables separately when needed.
