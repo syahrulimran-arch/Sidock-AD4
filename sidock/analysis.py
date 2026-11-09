@@ -588,7 +588,7 @@ def write_html_report(
     for label, key in (
         ("Pearson r", "pearson_energy_vs_pIC50"),
         ("Pearson p", "pearson_p"),
-        ("Spearman ρ", "spearman_energy_vs_pIC50"),
+        ("Spearman rho", "spearman_energy_vs_pIC50"),
         ("Spearman p", "spearman_p"),
         ("Linear R²", "r2_linear"),
     ):
