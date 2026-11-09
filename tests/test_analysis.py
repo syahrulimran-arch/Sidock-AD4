@@ -163,4 +163,4 @@ def test_plip_failure_is_nonfatal_and_recorded(tmp_path: Path, monkeypatch):
     assert result["successful"] == 1
     assert result["plip_completed"] == 0
     assert "synthetic PLIP failure" in (output / "plip_status.csv").read_text()
-    assert "PLIP interaction profiling" in (output / "report.html").read_text()
+    assert "PLIP protein" in (output / "report.html").read_text()
