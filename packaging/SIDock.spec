@@ -11,7 +11,7 @@ conda_prefix = Path(sys.prefix)
 
 datas = [(str(project_root / "THIRD_PARTY_NOTICES.txt"), ".")]
 binaries = []
-hiddenimports = collect_submodules("meeko")
+hiddenimports = collect_submodules("meeko") + collect_submodules("plip")
 
 # AutoDock-GPU is supplied by the user, but common official Windows builds
 # require Visual Studio's LLVM OpenMP runtime. Ship the verified x64 runtime in
@@ -28,6 +28,14 @@ meeko_datas, meeko_binaries, meeko_hidden = collect_all("meeko")
 datas += meeko_datas
 binaries += meeko_binaries
 hiddenimports += meeko_hidden
+
+# PLIP is optional at analysis time but bundled with the installer so users do
+# not need a separate Python/Conda setup. Its Open Babel dependency is already
+# collected below for ligand preparation.
+plip_datas, plip_binaries, plip_hidden = collect_all("plip")
+datas += plip_datas
+binaries += plip_binaries
+hiddenimports += plip_hidden
 
 # Bundle Open Babel's CLI, format plugins, and data. PyInstaller recursively
 # resolves the DLL dependencies of every executable and plugin listed here.

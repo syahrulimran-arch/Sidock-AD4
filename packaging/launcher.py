@@ -36,6 +36,7 @@ def packaged_runtime_self_test() -> int:
         import gemmi  # noqa: F401
         import meeko  # noqa: F401
         import scipy  # noqa: F401
+        from plip.structure.preparation import PDBComplex
         import shiboken6  # noqa: F401
         from PySide6 import QtCore, QtGui, QtWidgets  # noqa: F401
         from rdkit import Chem
@@ -55,6 +56,7 @@ def packaged_runtime_self_test() -> int:
             or not bundled_autodock_gpu_runtime_path()
             or not callable(ligand_main)
             or not callable(receptor_main)
+            or not callable(PDBComplex)
         ):
             return 1
         with tempfile.TemporaryDirectory() as folder:

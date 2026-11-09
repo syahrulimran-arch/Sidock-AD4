@@ -9,6 +9,8 @@ dependencies:
   - scipy
   - gemmi
   - openbabel
+  - plip>=3,<4
+  - lxml
   - pip
   - pip:
       - meeko>=0.6

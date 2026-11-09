@@ -16,7 +16,7 @@ a release needs to perform these steps; every end user receives one Setup EXE.
 2. Double-click `Build-Installer.bat`.
 3. Approve the Inno Setup installation if Windows Package Manager prompts for it.
 4. Wait for the dependency installation, tests, freezing, and installer compilation.
-5. Retrieve `dist\installer\SIDock_AD4_Setup_v0.7.6.exe`.
+5. Retrieve `dist\installer\SIDock_AD4_Setup_v0.7.7.exe`.
 
 AutoDock-GPU is an optional external executable. SIDock now includes its
 required x64 LLVM OpenMP runtime in a private application folder and supplies
@@ -45,7 +45,7 @@ fields and CSV report.
 
 ## What the Setup EXE contains
 
-- SIDock AD4 0.7.6
+- SIDock AD4 0.7.7
 - Python 3.11 runtime
 - PySide6 interface runtime
 - RDKit, Meeko, SciPy, and Gemmi

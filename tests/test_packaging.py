@@ -49,3 +49,9 @@ def test_autodock_gpu_openmp_runtime_is_packaged():
         "009b3aabfad6c4ccdd395b1befff744c141e51b2c124ca24c36f6d4631365cef"
     )
     assert "tools/autodock-gpu-runtime" in SPEC_FILE.read_text(encoding="utf-8")
+
+
+def test_plip_runtime_is_collected_for_the_installer():
+    text = SPEC_FILE.read_text(encoding="utf-8")
+    assert 'collect_submodules("plip")' in text
+    assert 'collect_all("plip")' in text

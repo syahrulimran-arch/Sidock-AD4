@@ -1,4 +1,4 @@
-SIDock AD4 0.7.6 - Third-party notices
+SIDock AD4 0.7.7 - Third-party notices
 =========================================
 
 The Windows distribution contains open-source runtime components, including
@@ -9,6 +9,9 @@ records.
 
 Open Babel is distributed under the GNU General Public License, version 2.
 Project and source: https://openbabel.org/
+
+PLIP is distributed under the GNU General Public License, version 2 only.
+Project and source: https://github.com/pharmai/plip
 
 The Windows distribution includes libomp140.x86_64.dll, the LLVM OpenMP
 runtime, obtained from the Microsoft.Quantum.Simulators 0.28.263081 package

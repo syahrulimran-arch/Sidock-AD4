@@ -39,7 +39,7 @@ function Invoke-Checked {
     }
 }
 
-Write-Host "SIDock AD4 0.7.6 installer build" -ForegroundColor Cyan
+Write-Host "SIDock AD4 0.7.7 installer build" -ForegroundColor Cyan
 Write-Host "Project: $ProjectRoot"
 New-Item -ItemType Directory -Path $BuildRoot -Force | Out-Null
 
@@ -49,7 +49,7 @@ if (-not (Test-Path (Join-Path $EnvironmentPath "python.exe"))) {
     Invoke-Checked $Conda @(
         "create", "--yes", "--prefix", $EnvironmentPath, "-c", "conda-forge",
         "python=3.11", "rdkit", "pyside6", "numpy", "scipy", "gemmi",
-        "openbabel", "pytest", "pyinstaller", "pyinstaller-hooks-contrib", "pip"
+        "openbabel", "plip>=3,<4", "lxml", "pytest", "pyinstaller", "pyinstaller-hooks-contrib", "pip"
     )
 }
 
@@ -132,7 +132,7 @@ if (-not $Iscc) {
 Write-Host "Compiling the Setup EXE..." -ForegroundColor Cyan
 Invoke-Checked $Iscc @($InstallerScript)
 
-$SetupPath = Join-Path $DistPath "installer\SIDock_AD4_Setup_v0.7.6.exe"
+$SetupPath = Join-Path $DistPath "installer\SIDock_AD4_Setup_v0.7.7.exe"
 if (-not (Test-Path $SetupPath)) {
     throw "The installer compiler finished but the expected Setup EXE was not created."
 }

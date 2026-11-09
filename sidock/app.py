@@ -54,7 +54,7 @@ def path_row(line: QLineEdit, browse) -> QWidget:
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("SIDock AD4 0.7.6 — Virtual Screening")
+        self.setWindowTitle("SIDock AD4 0.7.7 — Virtual Screening")
         self.resize(1100, 760)
         self.project: Project | None = None
         self.thread: QThread | None = None
@@ -188,7 +188,9 @@ class MainWindow(QMainWindow):
         layout.addWidget(params)
         analysis = QGroupBox("Automatic post-docking analysis"); af = QFormLayout(analysis)
         self.analysis_top_n = QSpinBox(); self.analysis_top_n.setRange(1, 500); self.analysis_top_n.setValue(20)
-        af.addRow("Top poses for receptor-contact analysis", self.analysis_top_n); layout.addWidget(analysis)
+        self.analysis_use_plip = QCheckBox("Run PLIP profiling and create 2D interaction maps"); self.analysis_use_plip.setChecked(True)
+        af.addRow("Top poses for receptor-contact analysis", self.analysis_top_n)
+        af.addRow(self.analysis_use_plip); layout.addWidget(analysis)
         buttons = QHBoxLayout(); self.run_btn = QPushButton("Run virtual screening"); self.run_btn.setProperty("primary", True); self.run_btn.clicked.connect(lambda: self.start_screen(False))
         self.retry_btn = QPushButton("Retry failed only"); self.retry_btn.clicked.connect(lambda: self.start_screen(True))
         self.cancel_btn = QPushButton("Cancel"); self.cancel_btn.setEnabled(False); self.cancel_btn.clicked.connect(self.cancel_work)
@@ -273,6 +275,7 @@ class MainWindow(QMainWindow):
         self.project.receptor_input_mode = self.receptor_mode.currentData(); self.project.openbabel_add_hydrogens = self.ob_add_h.isChecked()
         self.project.ligand_generate_3d = self.ligand_generate_3d.isChecked(); self.project.ligand_optimize = self.ligand_optimize.isChecked(); self.project.ligand_forcefield = self.ligand_forcefield.currentText(); self.project.ligand_num_conformers = self.ligand_num_conformers.value(); self.project.ligand_max_iters = self.ligand_max_iters.value()
         self.project.analysis_top_n = self.analysis_top_n.value()
+        self.project.analysis_use_plip = self.analysis_use_plip.isChecked()
         for spin, value in zip(self.centers, ("center_x", "center_y", "center_z")): setattr(self.project.grid, value, spin.value())
         for spin, value in zip(self.npts, ("npts_x", "npts_y", "npts_z")): setattr(self.project.grid, value, spin.value() + spin.value() % 2)
         self.project.grid.spacing = self.spacing.value(); self.project.docking.ga_runs = self.ga_runs.value(); self.project.docking.ga_num_evals = self.ga_evals.value(); self.project.docking.parallel_jobs = self.parallel.value()
@@ -285,6 +288,7 @@ class MainWindow(QMainWindow):
         mode_index = self.receptor_mode.findData(p.receptor_input_mode); self.receptor_mode.setCurrentIndex(max(0, mode_index)); self.ob_add_h.setChecked(p.openbabel_add_hydrogens)
         self.ligand_generate_3d.setChecked(p.ligand_generate_3d); self.ligand_optimize.setChecked(p.ligand_optimize); ff_index = self.ligand_forcefield.findText(p.ligand_forcefield); self.ligand_forcefield.setCurrentIndex(max(0, ff_index)); self.ligand_num_conformers.setValue(p.ligand_num_conformers); self.ligand_max_iters.setValue(p.ligand_max_iters)
         self.analysis_top_n.setValue(p.analysis_top_n)
+        self.analysis_use_plip.setChecked(p.analysis_use_plip)
         self.remove_waters.setChecked(p.remove_waters); self.remove_hetero.setChecked(p.remove_hetero)
         self.receptor_chain.setText(p.receptor_chain); self.keep_hetero.setText(p.keep_hetero_resnames); self.bound_resname.setText(p.box_reference_resname)
         for spin, val in zip(self.centers, (p.grid.center_x, p.grid.center_y, p.grid.center_z)): spin.setValue(val)
@@ -426,7 +430,7 @@ class MainWindow(QMainWindow):
             self,
             "About SIDock AD4",
             "<h2>SIDock AD4</h2>"
-            "<p><b>Version 0.7.6</b></p>"
+            "<p><b>Version 0.7.7</b></p>"
             "<p>Streamlined Interface for Docking with AutoDock4.</p>"
             "<p>Guided virtual screening and post-docking analysis.</p>"
             "<p><b>Developed by Dr Syahrul Imran</b></p>",

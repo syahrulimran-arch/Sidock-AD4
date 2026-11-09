@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import html
+import json
 import math
 import re
 import statistics
@@ -9,7 +10,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable
 
+from .activity import correlate_activity, extract_activity_metadata, write_activity_scatter_svg
 from .core import ENERGY_RE, RUN_RE, parse_dlg, safe_stem
+from .plip_analysis import run_plip_for_ranked_complexes
 
 
 CLUSTER_RANK_RE = re.compile(r"Cluster\s+Rank\s*=\s*(\d+)", re.IGNORECASE)
@@ -512,6 +515,14 @@ def _table(rows: list[dict[str, object]], fields: list[tuple[str, str]], limit: 
                 )
             elif key == "pose_file" and value:
                 cells.append(f'<td><a href="{html.escape(value, quote=True)}">Open pose</a></td>')
+            elif key == "plip_map" and value:
+                link = html.escape(value, quote=True)
+                cells.append(
+                    '<td><span class="pose-actions">'
+                    f'<a class="action" href="{link}" target="_blank">Open 2D map</a>'
+                    f'<a class="action download" href="{link}" download>Download SVG</a>'
+                    '</span></td>'
+                )
             else:
                 cells.append(f"<td>{html.escape(value)}</td>")
         body.append("<tr>" + "".join(cells) + "</tr>")
@@ -521,7 +532,13 @@ def _table(rows: list[dict[str, object]], fields: list[tuple[str, str]], limit: 
 def write_html_report(
     destination: Path, ranking: list[dict[str, object]], comparison: list[dict[str, object]], clusters: list[dict[str, object]],
     contacts: list[dict[str, object]], total_dlgs: int, top_n: int,
+    activity_stats: dict[str, object] | None = None,
+    plip_rows: list[dict[str, object]] | None = None,
+    plip_status: list[dict[str, object]] | None = None,
 ) -> None:
+    activity_stats = activity_stats or {"n": 0, "rows": []}
+    plip_rows = plip_rows or []
+    plip_status = plip_status or []
     energies = [float(row["energy_kcal_mol"]) for row in ranking]
     mean = statistics.mean(energies) if energies else float("nan")
     median = statistics.median(energies) if energies else float("nan")
@@ -537,6 +554,8 @@ def write_html_report(
         ("energy_rank", "Energy rank"), ("ligand", "Ligand"), ("energy_kcal_mol", "Energy"),
         ("ligand_efficiency", "Ligand efficiency"), ("heavy_atoms", "Heavy atoms"),
         ("best_run", "Run"), ("cluster_rank", "Cluster"), ("cluster_size", "Cluster size"),
+        ("ic50_uM", "IC50 (µM)"), ("pIC50", "pIC50"),
+        ("plip_interactions", "PLIP interactions"), ("plip_map", "PLIP 2D map"),
         ("complex_file", "Best pose complex"),
     ])
     comparison_table = _table(comparison, [
@@ -544,8 +563,11 @@ def write_html_report(
         ("energy_rank", "Energy rank"), ("energy_kcal_mol", "Energy"),
         ("ligand_efficiency_rank", "LE rank"), ("ligand_efficiency", "Ligand efficiency"),
         ("cluster_support_rank", "Cluster rank"), ("cluster_support", "Cluster support"),
+        ("ic50_uM", "IC50 (µM)"), ("pIC50", "pIC50"),
         ("contact_residues", "Contact residues"), ("putative_hbond_residues", "H-bond residues"),
-        ("metal_coordination_residues", "Metal contacts"), ("complex_file", "Best pose complex"),
+        ("metal_coordination_residues", "Metal contacts"),
+        ("plip_interactions", "PLIP interactions"), ("plip_map", "PLIP 2D map"),
+        ("complex_file", "Best pose complex"),
     ])
     cluster_table = _table(clusters, [
         ("ligand", "Ligand"), ("cluster_rank", "Cluster"), ("members", "Members"),
@@ -556,6 +578,59 @@ def write_html_report(
         ("interaction_types", "Geometry-based contacts"), ("minimum_distance_A", "Min distance (Å)"),
         ("ligand_atoms", "Ligand atoms"), ("receptor_atoms", "Receptor atoms"),
     ], 500)
+    plip_table = _table(plip_rows, [
+        ("rank", "Rank"), ("ligand", "Ligand"), ("interaction_type", "PLIP interaction"),
+        ("residue", "Residue"), ("distance_A", "Distance (Å)"),
+        ("binding_site", "Binding site"), ("ligand_atom_ids", "Ligand atom IDs"),
+    ], 1000)
+    activity_n = int(activity_stats.get("n", 0) or 0)
+    activity_values = []
+    for label, key in (
+        ("Pearson r", "pearson_energy_vs_pIC50"),
+        ("Pearson p", "pearson_p"),
+        ("Spearman ρ", "spearman_energy_vs_pIC50"),
+        ("Spearman p", "spearman_p"),
+        ("Linear R²", "r2_linear"),
+    ):
+        value = activity_stats.get(key)
+        activity_values.append(f"<strong>{html.escape(label)}:</strong> {'N/A' if value is None else f'{float(value):.4g}'}")
+    activity_section = (
+        f'<section><h2>Experimental activity correlation</h2><p>Matched ligands: {activity_n}. '
+        + " &nbsp; ".join(activity_values)
+        + '</p><p class="note">Correlation is reported only for matched numerical IC50 values. '
+          'It describes association and does not validate docking accuracy or establish causation.</p>'
+        + ('<img class="analysis-figure" src="activity_scatter.svg" alt="Docking energy versus pIC50 scatter plot">' if activity_n >= 2 else '<p>At least two matched activity values are required for a scatter plot.</p>')
+        + '</section>'
+    )
+    map_cards = []
+    for row in ranking:
+        link = str(row.get("plip_map", ""))
+        if not link:
+            continue
+        escaped_link = html.escape(link, quote=True)
+        map_cards.append(
+            '<article class="map-card">'
+            f'<h3>{html.escape(str(row["ligand"]))}</h3>'
+            f'<a href="{escaped_link}" target="_blank"><img src="{escaped_link}" alt="PLIP interaction map for {html.escape(str(row["ligand"]), quote=True)}"></a>'
+            f'<p><a class="action download" href="{escaped_link}" download>Download SVG</a></p>'
+            '</article>'
+        )
+    plip_failures = [row for row in plip_status if row.get("status") == "failed"]
+    plip_note = (
+        f"PLIP completed for {len(plip_status) - len(plip_failures)} of {len(plip_status)} selected complexes. "
+        f"Detected interactions: {len(plip_rows)}."
+    ) if plip_status else "PLIP profiling was disabled or no receptor-ligand complexes were available."
+    if plip_failures:
+        failure_text = "; ".join(
+            f"{row.get('ligand')}: {row.get('error')}" for row in plip_failures[:8]
+        )
+        plip_note += f" Failures: {failure_text}"
+    plip_section = (
+        '<section><h2>PLIP protein–ligand interaction profiling</h2>'
+        f'<p class="note">{html.escape(plip_note)}</p>'
+        f'<div class="map-grid">{"".join(map_cards)}</div>'
+        f'{plip_table or "<p>No PLIP interaction rows were generated.</p>"}</section>'
+    )
     document = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SIDock AD4 analysis</title><style>
@@ -564,16 +639,20 @@ h1{{color:#174b7a}}h2{{margin-top:34px}}.cards{{display:flex;flex-wrap:wrap;gap:
 .card span{{display:block;color:#64748b;font-size:13px}}.card strong{{font-size:24px}}section{{background:white;border:1px solid #d8e1ec;border-radius:9px;padding:18px;margin-top:18px;overflow:auto}}
 table{{border-collapse:collapse;width:100%;font-size:13px}}th,td{{border-bottom:1px solid #e5eaf0;padding:8px;text-align:left;white-space:nowrap}}th{{background:#edf4fa;position:sticky;top:0}}
 svg{{width:100%;height:auto;font:12px Segoe UI,Arial}}.note{{background:#fff7dc;border-left:4px solid #d89b00;padding:12px}}
+.analysis-figure{{display:block;max-width:900px;width:100%;height:auto;margin:16px auto}}.map-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}}
+.map-card{{border:1px solid #d8e1ec;border-radius:8px;padding:12px;background:#fbfdff}}.map-card img{{width:100%;height:auto;background:white}}
 .pose-actions{{display:flex;gap:7px;align-items:center}}.action{{display:inline-block;padding:6px 10px;border:1px solid #2f6fa6;border-radius:5px;color:#1d5d91;text-decoration:none;font-weight:600;background:#f5faff}}
 .action:hover{{background:#e8f3fc}}.action.download{{color:white;background:#2f6fa6}}.action.download:hover{{background:#245a87}}
 </style></head><body><main><h1>SIDock AD4 post-docking analysis</h1>
 <div class="cards">{cards_html}</div>
 <section><h2>Top-ranked ligands</h2>{_energy_bars(ranking)}</section>
 <section><h2>Energy distribution</h2>{_histogram(energies)}</section>
+{activity_section}
 <section><h2>Compound comparison and overall ranking</h2><p class="note">Consensus score: 65% binding energy, 25% ligand efficiency, and 10% AutoDock cluster support. Missing metrics are excluded and the remaining weights are renormalized. Contact counts are displayed for comparison but do not increase the score.</p>{comparison_table}</section>
 <section><h2>Binding-energy ranking</h2>{ranking_table}</section>
 <section><h2>AutoDock clusters</h2>{cluster_table or '<p>No cluster annotations were found.</p>'}</section>
 <section><h2>Receptor contacts for top {top_n} poses</h2><p class="note">Contact labels are geometry-based screening annotations. Putative hydrogen bonds require an explicit polar hydrogen in the PDBQT; they are not an energetic decomposition or a replacement for manual pose inspection.</p>{contact_table}</section>
+{plip_section}
 </main></body></html>"""
     destination.write_text(document, encoding="utf-8")
 
@@ -581,7 +660,8 @@ svg{{width:100%;height:auto;font:12px Segoe UI,Arial}}.note{{background:#fff7dc;
 def analyze_docking_results(
     receptor: Path, dlg_dir: Path, output_dir: Path, top_n: int = 20,
     progress: Callable[[int, int], None] | None = None,
-    *, engine: str = "autodock4",
+    *, engine: str = "autodock4", ligand_sdf_dir: Path | None = None,
+    grid_metadata: dict[str, object] | None = None, run_plip: bool = False,
 ) -> dict[str, object]:
     if not receptor.exists():
         raise FileNotFoundError("Prepared receptor PDBQT is missing.")
@@ -664,16 +744,37 @@ def analyze_docking_results(
         ligand_atoms = parse_pdbqt_atoms(item[1])
         contacts.extend(contact_rows(str(row["ligand"]), int(row["rank"]), ligand_atoms, receptor_atoms))
 
+    activity_files = sorted(ligand_sdf_dir.glob("*.sdf")) if ligand_sdf_dir and ligand_sdf_dir.is_dir() else []
+    activity_rows = extract_activity_metadata(activity_files, output_dir / "activity.csv")
+    activity_stats = correlate_activity(ranking, activity_rows, output_dir / "activity_statistics.json")
+    write_activity_scatter_svg(activity_stats, output_dir / "activity_scatter.svg")
+
+    plip_rows: list[dict[str, object]] = []
+    plip_status: list[dict[str, object]] = []
+    if run_plip:
+        plip_rows, plip_status = run_plip_for_ranked_complexes(
+            ranking, output_dir, top_n, ligand_sdf_dir=ligand_sdf_dir,
+        )
+    _write_csv(output_dir / "plip_interactions.csv", plip_rows, [
+        "ligand", "rank", "binding_site", "interaction_type", "residue",
+        "residue_name", "chain", "residue_number", "distance_A", "ligand_atom_ids",
+    ])
+    _write_csv(output_dir / "plip_status.csv", plip_status, [
+        "ligand", "status", "interactions", "map", "error",
+    ])
+
     comparison = add_compound_comparison(ranking, contacts, top_n)
 
     _write_csv(output_dir / "ranking.csv", ranking, [
         "rank", "energy_rank", "consensus_rank", "ligand", "energy_kcal_mol", "ligand_efficiency", "heavy_atoms",
+        "ic50_uM", "pIC50", "plip_interactions", "plip_map",
         "best_run", "cluster_rank", "cluster_size", "pose_file", "complex_file", "dlg",
     ])
     _write_csv(output_dir / "comparison.csv", comparison, [
         "consensus_rank", "ligand", "consensus_score", "energy_rank", "energy_kcal_mol",
         "ligand_efficiency_rank", "ligand_efficiency", "heavy_atoms",
         "cluster_support_rank", "cluster_support", "contacts_analyzed", "contact_residues",
+        "ic50_uM", "pIC50", "plip_interactions", "plip_map",
         "putative_hbond_residues", "hydrophobic_residues", "polar_contact_residues",
         "metal_coordination_residues", "best_run", "pose_file", "complex_file", "dlg",
     ])
@@ -685,9 +786,48 @@ def analyze_docking_results(
         "minimum_distance_A", "interaction_types", "ligand_atoms", "receptor_atoms",
     ])
     report = output_dir / "report.html"
-    write_html_report(report, ranking, comparison, cluster_rows, contacts, len(dlgs), top_n)
+    write_html_report(
+        report, ranking, comparison, cluster_rows, contacts, len(dlgs), top_n,
+        activity_stats, plip_rows, plip_status,
+    )
+    evidence = {
+        "rules": [
+            "Only discuss values present in generated files.",
+            "Do not invent residues, interactions, scores, or statistical significance.",
+            "Docking and PLIP interactions are computational predictions, not experimental proof.",
+            "Separate experimental IC50 values from docking-derived quantities.",
+        ],
+        "grid": grid_metadata or {},
+        "activity_statistics": activity_stats,
+        "plip": {
+            "enabled": run_plip,
+            "complexes_attempted": len(plip_status),
+            "complexes_completed": sum(row.get("status") == "complete" for row in plip_status),
+            "interaction_rows": len(plip_rows),
+        },
+        "files": {
+            "ranking": "ranking.csv", "comparison": "comparison.csv",
+            "clusters": "clusters.csv", "contacts": "contacts.csv",
+            "activity": "activity.csv", "activity_statistics": "activity_statistics.json",
+            "plip_interactions": "plip_interactions.csv", "plip_status": "plip_status.csv",
+            "report": "report.html",
+        },
+    }
+    (output_dir / "evidence.json").write_text(json.dumps(evidence, indent=2), encoding="utf-8")
+    (output_dir / "CODEX_DISCUSSION_PROMPT.md").write_text(
+        "# SIDock AD4 evidence-based writing task\n\n"
+        "Read evidence.json and the generated CSV files before writing. Every numerical, "
+        "residue, interaction, and statistical claim must be traceable to those outputs. "
+        "Do not invent missing data. Distinguish docking predictions, PLIP annotations, "
+        "and experimental activity, and state their limitations.\n",
+        encoding="utf-8",
+    )
     return {
         "report": report, "ranking": output_dir / "ranking.csv", "comparison": output_dir / "comparison.csv",
         "clusters": output_dir / "clusters.csv", "contacts": output_dir / "contacts.csv",
+        "activity": output_dir / "activity.csv", "activity_statistics": output_dir / "activity_statistics.json",
+        "plip_interactions": output_dir / "plip_interactions.csv", "plip_status": output_dir / "plip_status.csv",
+        "evidence": output_dir / "evidence.json",
         "successful": len(ranking), "total": len(dlgs), "poses": len(best_pose_by_ligand),
+        "plip_completed": sum(row.get("status") == "complete" for row in plip_status),
     }

@@ -8,6 +8,13 @@ application, executable, installer, shortcuts, Python package, reports, and
 build system. Projects made with releases under the former DockFlow AD4 name
 remain compatible, and saved tool settings are migrated automatically.
 
+Version 0.7.7 adds optional bundled PLIP interaction profiling for the top
+ranked receptor-ligand complexes, downloadable per-ligand 2D interaction maps,
+detailed interaction/status CSV files, experimental IC50/pIC50 extraction from
+SDF properties, docking-versus-activity statistics and plot, plus an auditable
+evidence bundle and discussion prompt. A PLIP failure is reported per ligand
+and does not discard the docking ranking or the existing geometric analysis.
+
 Version 0.7.6 packages the x64 LLVM OpenMP runtime required by common Windows
 AutoDock-GPU builds. SIDock adds its private runtime directory to the external
 tool environment automatically, so end users no longer need to install
@@ -65,13 +72,15 @@ consensus rank weighted 65%, 25%, and 10%, respectively. Contact counts are
 shown side by side but do not inflate the score. The analysis runs after docking
 and can be rerun for existing DLG files.
 
-Current version: **0.7.6**
+Current version: **0.7.7**
 
 SIDock AD4 is a Windows-friendly Python desktop application for batch virtual screening with AutoGrid4 and either AutoDock4 or optional AutoDock-GPU. It keeps the native AutoDock4 file formats visible while replacing the repetitive command-line workflow with four guided tabs.
 
 Complete end-user, scientific, troubleshooting, and developer guidance is
 provided in `documentation/SIDock_AD4_Software_Documentation_v0.7.1.pdf` and
 the editable Word version beside it. These documents describe the 0.7.1 CPU workflow; see the 0.7.2 GPU supplement for the new engine.
+The v0.7.7 analysis, experimental-activity and PLIP workflow is documented in
+`documentation/Analysis_and_PLIP_Guide_v0.7.7.md`.
 
 ## What the first version does
 
@@ -86,6 +95,8 @@ the editable Word version beside it. These documents describe the 0.7.1 CPU work
 - supports cancellation, resuming a project, and rerunning only failed ligands;
 - parses DLG binding energies and writes a ranked `results/results.csv` file;
 - extracts best-pose PDBQT files, creates receptor-ligand PDB complexes, and writes an interactive post-docking HTML report with open and download controls;
+- optionally runs bundled PLIP on top-ranked complexes and creates detailed interaction CSV files plus ligand-centred 2D SVG maps;
+- extracts IC50 metadata from prepared SDF files, calculates pIC50 correlations when sufficient matched data exist, and writes an evidence bundle for traceable reporting;
 - preserves every PDBQT, GPF, DPF, GLG, DLG, command, and error log for auditability.
 
 SIDock does not modify or redistribute AutoDock executables. Supply `autogrid4.exe` and your selected docking engine executable yourself.
@@ -94,7 +105,7 @@ SIDock does not modify or redistribute AutoDock executables. Supply `autogrid4.e
 
 ### Normal installer (recommended)
 
-Download `SIDock_AD4_Setup_v0.7.6.exe`, double-click it, and follow the
+Download `SIDock_AD4_Setup_v0.7.7.exe`, double-click it, and follow the
 wizard. The installed application includes Python, PySide6, RDKit, Meeko,
 SciPy, Gemmi, and Open Babel. Conda and manual `pip` commands are not required.
 
@@ -113,7 +124,7 @@ needed for the AutoDockTools receptor mode.
 Miniforge/Conda is recommended because RDKit is substantially easier to install reliably that way. From the extracted source folder, either create the environment manually or use the supplied file:
 
 ```powershell
-conda create -n sidock -c conda-forge python=3.11 rdkit pyside6 numpy scipy gemmi openbabel
+conda create -n sidock -c conda-forge python=3.11 rdkit pyside6 numpy scipy gemmi openbabel plip
 conda activate sidock
 pip install meeko
 pip install -e .
@@ -191,8 +202,16 @@ project/
   analysis/comparison.csv
   analysis/clusters.csv
   analysis/contacts.csv
+  analysis/activity.csv
+  analysis/activity_statistics.json
+  analysis/activity_scatter.svg
+  analysis/plip_interactions.csv
+  analysis/plip_status.csv
+  analysis/evidence.json
+  analysis/CODEX_DISCUSSION_PROMPT.md
   analysis/poses/
   analysis/complexes/
+  analysis/plip_maps/
 ```
 
 ## Building the Windows installer
@@ -203,7 +222,7 @@ runs the tests, freezes the application, and compiles the setup wizard. The
 finished file is written to:
 
 ```text
-dist\installer\SIDock_AD4_Setup_v0.7.6.exe
+dist\installer\SIDock_AD4_Setup_v0.7.7.exe
 ```
 
 Conda or Miniforge must already be installed for this one-time developer build.

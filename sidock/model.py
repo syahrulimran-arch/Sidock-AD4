@@ -72,6 +72,7 @@ class Project:
     ligand_max_iters: int = 500
     ligand_num_conformers: int = 10
     analysis_top_n: int = 20
+    analysis_use_plip: bool = True
 
     def __post_init__(self) -> None:
         # A relative project name such as "testing" used to make tool paths
@@ -87,8 +88,9 @@ class Project:
         for relative in (
             "receptor", "ligands/source", "ligands/prepared", "grid",
             "docking/dpf", "docking/dlg", "logs", "results",
-            "analysis", "analysis/poses", "analysis/complexes",
+            "analysis", "analysis/poses", "analysis/complexes", "analysis/plip_maps",
             "docking/gpu/dlg", "docking/gpu/work", "results/gpu", "analysis/gpu",
+            "analysis/gpu/plip_maps",
         ):
             (self.path / relative).mkdir(parents=True, exist_ok=True)
 

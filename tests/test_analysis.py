@@ -1,9 +1,13 @@
 from pathlib import Path
 
+from rdkit import Chem
+
 from sidock.analysis import (
     add_compound_comparison, analyze_docking_results, parse_dlg_clusters,
     parse_dlg_poses,
 )
+from sidock.activity import correlate_activity, extract_activity_metadata
+from sidock.plip_analysis import interaction_rows_from_set
 
 
 RECEPTOR = """HETATM    1 FE   HEM A 601       0.000   0.000   0.000  1.00  0.00     0.000 Fe
@@ -55,6 +59,8 @@ def test_complete_analysis(tmp_path: Path):
     assert "complexes/ligand_1_best_complex.pdb" in report
     assert "complex_file" in (output / "ranking.csv").read_text()
     assert (output / "comparison.csv").exists()
+    assert (output / "evidence.json").exists()
+    assert (output / "CODEX_DISCUSSION_PROMPT.md").exists()
 
 
 def test_consensus_ranking_is_transparent():
@@ -100,3 +106,61 @@ def test_unprefixed_autodock_cluster_section_is_merged(tmp_path: Path):
         "best_energy_kcal_mol": "-8.520", "mean_energy_kcal_mol": "-8.520",
         "best_run": 1,
     }]
+
+
+def test_activity_metadata_and_correlations_are_traceable(tmp_path: Path):
+    sdf_files = []
+    activity = [("ligand_1", 1.0), ("ligand_2", 10.0), ("ligand_3", 100.0)]
+    for name, ic50 in activity:
+        molecule = Chem.AddHs(Chem.MolFromSmiles("CCO"))
+        molecule.SetProp("_Name", name)
+        molecule.SetProp("IC50_uM", str(ic50))
+        path = tmp_path / f"{name}.sdf"
+        writer = Chem.SDWriter(str(path)); writer.write(molecule); writer.close()
+        sdf_files.append(path)
+    rows = extract_activity_metadata(sdf_files, tmp_path / "activity.csv")
+    ranking = [
+        {"ligand": name, "energy_kcal_mol": energy}
+        for name, energy in (("ligand_1", "-9.0"), ("ligand_2", "-8.0"), ("ligand_3", "-7.0"))
+    ]
+    stats = correlate_activity(ranking, rows, tmp_path / "activity_statistics.json")
+    assert stats["n"] == 3
+    assert stats["pearson_energy_vs_pIC50"] is not None
+    assert ranking[0]["pIC50"] == "6.000000"
+    assert "ligand_3" in (tmp_path / "activity.csv").read_text()
+
+
+def test_plip_interactions_are_normalized_without_plip_runtime():
+    class Interaction:
+        restype = "ASP"
+        resnr = 25
+        reschain = "A"
+        distance = 3.1
+        ligatom_orig_idx = 7
+
+    class InteractionSet:
+        hydrophobic_contacts = [Interaction()]
+
+    rows = interaction_rows_from_set("ligand_1", 1, "LIG:A:1", InteractionSet())
+    assert rows == [{
+        "ligand": "ligand_1", "rank": 1, "binding_site": "LIG:A:1",
+        "interaction_type": "hydrophobic", "residue": "ASP A:25",
+        "residue_name": "ASP", "chain": "A", "residue_number": "25",
+        "distance_A": "3.100", "ligand_atom_ids": "7",
+    }]
+
+
+def test_plip_failure_is_nonfatal_and_recorded(tmp_path: Path, monkeypatch):
+    receptor = tmp_path / "receptor.pdbqt"; receptor.write_text(RECEPTOR)
+    dlg_dir = tmp_path / "dlg"; dlg_dir.mkdir(); (dlg_dir / "ligand_1.dlg").write_text(DLG)
+
+    def fail_plip(*_args, **_kwargs):
+        raise RuntimeError("synthetic PLIP failure")
+
+    monkeypatch.setattr("sidock.plip_analysis.analyze_complex_with_plip", fail_plip)
+    output = tmp_path / "analysis"
+    result = analyze_docking_results(receptor, dlg_dir, output, 10, run_plip=True)
+    assert result["successful"] == 1
+    assert result["plip_completed"] == 0
+    assert "synthetic PLIP failure" in (output / "plip_status.csv").read_text()
+    assert "PLIP interaction profiling" in (output / "report.html").read_text()

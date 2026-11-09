@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import threading
+from dataclasses import asdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -312,6 +313,9 @@ class WorkflowWorker(QObject):
             self.project.analysis_top_n,
             lambda done, total: self.progress.emit(done, total),
             engine=self.project.docking.engine,
+            ligand_sdf_dir=self.project.path / "ligands" / "source",
+            grid_metadata=asdict(self.project.grid),
+            run_plip=self.project.analysis_use_plip,
         )
 
     @staticmethod
@@ -337,5 +341,6 @@ class WorkflowWorker(QObject):
         self.finished.emit(
             True,
             f"Analysis complete: {analysis['successful']}/{analysis['total']} ligands ranked, "
-            f"{analysis['poses']} best poses extracted. Report: {analysis['report']}",
+            f"{analysis['poses']} best poses extracted, {analysis['plip_completed']} PLIP profiles completed. "
+            f"Report: {analysis['report']}",
         )
