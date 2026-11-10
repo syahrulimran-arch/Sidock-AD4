@@ -45,6 +45,7 @@ jobs:
           $plugins = @(Get-ChildItem $pluginDir -Filter "*.obf" -File -ErrorAction Stop)
           if ($plugins.Count -eq 0) { throw "No packaged Open Babel .obf plugins were found" }
           Write-Host "Packaged Open Babel plugins: $($plugins.Count)"
+          python packaging/pe_dependencies.py "dist\SIDock"
           # Reproduce a normal installed PC. The activated Conda environment
           # previously supplied missing DLLs and could make a broken package
           # pass its runtime self-test.
