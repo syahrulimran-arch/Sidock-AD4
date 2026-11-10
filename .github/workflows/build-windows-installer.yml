@@ -48,13 +48,31 @@ jobs:
           # Reproduce a normal installed PC. The activated Conda environment
           # previously supplied missing DLLs and could make a broken package
           # pass its runtime self-test.
-          $env:BABEL_LIBDIR = ""
-          $env:BABEL_DATADIR = ""
+          $internal = (Resolve-Path "dist\SIDock\_internal").Path
+          $openBabelRoot = Join-Path $internal "tools\openbabel"
+          $env:BABEL_LIBDIR = (Resolve-Path $pluginDir).Path
+          $env:BABEL_DATADIR = (Resolve-Path (Join-Path $openBabelRoot "data")).Path
           $env:PYTHONPATH = ""
           $env:CONDA_PREFIX = ""
-          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
-          & "dist\SIDock\SIDock.exe" --self-test
-          if ($LASTEXITCODE -ne 0) { throw "Packaged runtime self-test failed" }
+          $env:PATH = "$openBabelRoot;$internal;$env:SystemRoot\System32;$env:SystemRoot"
+
+          $formatOutput = & (Join-Path $openBabelRoot "obabel.exe") -L formats 2>&1
+          $formatExit = $LASTEXITCODE
+          $formatOutput | Write-Host
+          if ($formatExit -ne 0 -or -not ($formatOutput -match "(?m)^pdb\s+--") -or -not ($formatOutput -match "(?m)^pdbqt\s+--")) {
+            $dumpbin = Get-ChildItem "$env:ProgramFiles\Microsoft Visual Studio\2022" -Filter "dumpbin.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($dumpbin) {
+              & $dumpbin.FullName /dependents (Join-Path $pluginDir "formats_common.obf")
+            }
+            throw "Packaged obabel cannot load its PDB/PDBQT plugins"
+          }
+
+          $selfTestOut = Join-Path $PWD ".build\sidock-self-test.out"
+          $selfTestErr = Join-Path $PWD ".build\sidock-self-test.err"
+          $process = Start-Process -FilePath "dist\SIDock\SIDock.exe" -ArgumentList "--self-test" -Wait -PassThru -RedirectStandardOutput $selfTestOut -RedirectStandardError $selfTestErr
+          if (Test-Path $selfTestOut) { Get-Content $selfTestOut }
+          if (Test-Path $selfTestErr) { Get-Content $selfTestErr }
+          if ($process.ExitCode -ne 0) { throw "Packaged runtime self-test failed with exit code $($process.ExitCode)" }
 
       - name: Install Inno Setup
         run: choco install innosetup --yes --no-progress

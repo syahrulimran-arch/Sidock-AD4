@@ -37,21 +37,26 @@ def packaged_runtime_self_test() -> int:
         import gemmi  # noqa: F401
         import meeko  # noqa: F401
         import scipy  # noqa: F401
-        from plip.structure.preparation import PDBComplex
         import shiboken6  # noqa: F401
         from PySide6 import QtCore, QtGui, QtWidgets  # noqa: F401
         from rdkit import Chem
         from meeko.cli.mk_prepare_ligand import main as ligand_main
         from meeko.cli.mk_prepare_receptor import main as receptor_main
 
-        from sidock.app import MainWindow
         from sidock.core import (
             bundled_autodock_gpu_runtime_path,
             bundled_openbabel_path,
+            external_tool_environment,
             split_and_normalize_ligands,
             validate_ligand_geometry,
             verify_openbabel_formats,
         )
+        # PLIP imports the Open Babel Python bindings immediately. Populate
+        # the frozen Open Babel paths before that import, just as child tools
+        # receive them during normal application use.
+        os.environ.update(external_tool_environment())
+        from plip.structure.preparation import PDBComplex
+        from sidock.app import MainWindow
         from sidock.model import Project
         if (
             not bundled_openbabel_path()
