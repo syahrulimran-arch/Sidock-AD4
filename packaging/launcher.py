@@ -5,6 +5,7 @@ from multiprocessing import freeze_support
 import os
 import sys
 import tempfile
+import traceback
 from pathlib import Path
 
 
@@ -90,6 +91,7 @@ def packaged_runtime_self_test() -> int:
             app.processEvents()
             return 0 if gui_ok else 1
     except BaseException:
+        traceback.print_exc()
         return 1
 
 

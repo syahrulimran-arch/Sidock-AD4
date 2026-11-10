@@ -41,6 +41,18 @@ jobs:
         run: |
           pyinstaller --noconfirm --clean --distpath dist --workpath .build/pyinstaller packaging/SIDock.spec
           Copy-Item -Force "$env:CONDA_PREFIX\Library\bin\*.dll" "dist\SIDock\_internal\"
+          $pluginDir = "dist\SIDock\_internal\tools\openbabel\plugins"
+          $plugins = @(Get-ChildItem $pluginDir -Filter "*.obf" -File -ErrorAction Stop)
+          if ($plugins.Count -eq 0) { throw "No packaged Open Babel .obf plugins were found" }
+          Write-Host "Packaged Open Babel plugins: $($plugins.Count)"
+          # Reproduce a normal installed PC. The activated Conda environment
+          # previously supplied missing DLLs and could make a broken package
+          # pass its runtime self-test.
+          $env:BABEL_LIBDIR = ""
+          $env:BABEL_DATADIR = ""
+          $env:PYTHONPATH = ""
+          $env:CONDA_PREFIX = ""
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
           & "dist\SIDock\SIDock.exe" --self-test
           if ($LASTEXITCODE -ne 0) { throw "Packaged runtime self-test failed" }
 
