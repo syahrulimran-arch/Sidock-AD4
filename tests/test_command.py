@@ -107,7 +107,10 @@ def test_automatic_meeko_tool_check_never_starts_subprocess(monkeypatch):
         "sidock.core.subprocess.run",
         lambda *args, **kwargs: pytest.fail("automatic Meeko started a subprocess"),
     )
-    messages = check_tool_setup("missing-grid", "missing-dock", BUNDLED_MEEKO, BUNDLED_MEEKO)
+    messages = check_tool_setup(
+        "missing-grid", "missing-dock", BUNDLED_MEEKO, BUNDLED_MEEKO,
+        openbabel="missing-openbabel",
+    )
     assert any("OK: Meeko ligand preparation" in message for message in messages)
     assert any("OK: Meeko receptor preparation" in message for message in messages)
 
