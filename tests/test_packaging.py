@@ -61,3 +61,5 @@ def test_openbabel_obf_format_plugins_are_collected():
     text = SPEC_FILE.read_text(encoding="utf-8")
     assert 'glob("*.obf")' in text
     assert "Open Babel format plugins (*.obf) were not found" in text
+    assert '"tools/openbabel"' in text
+    assert '"tools/openbabel/plugins"' not in text

@@ -108,7 +108,10 @@ def external_tool_environment() -> dict[str, str]:
     resource_dir = bundled_resource_dir()
     root = resource_dir / "tools" / "openbabel"
     data_dir = root / "data"
-    plugin_dir = root / "plugins"
+    # Open Babel's MSVC/Conda Windows build installs .obf modules beside the
+    # executable and core DLL. Retaining that layout is required for the
+    # Windows loader to initialize the modules reliably.
+    plugin_dir = root
     if data_dir.is_dir():
         environment["BABEL_DATADIR"] = str(data_dir) + os.sep
     if plugin_dir.is_dir():

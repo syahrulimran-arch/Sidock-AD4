@@ -41,7 +41,7 @@ jobs:
         run: |
           pyinstaller --noconfirm --clean --distpath dist --workpath .build/pyinstaller packaging/SIDock.spec
           Copy-Item -Force "$env:CONDA_PREFIX\Library\bin\*.dll" "dist\SIDock\_internal\"
-          $pluginDir = "dist\SIDock\_internal\tools\openbabel\plugins"
+          $pluginDir = "dist\SIDock\_internal\tools\openbabel"
           $plugins = @(Get-ChildItem $pluginDir -Filter "*.obf" -File -ErrorAction Stop)
           if ($plugins.Count -eq 0) { throw "No packaged Open Babel .obf plugins were found" }
           Write-Host "Packaged Open Babel plugins: $($plugins.Count)"

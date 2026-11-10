@@ -106,7 +106,7 @@ if (-not (Test-Path $FrozenExecutable)) {
     throw "PyInstaller did not create dist\SIDock\SIDock.exe."
 }
 Write-Host "Testing the packaged GUI and scientific runtime..." -ForegroundColor Cyan
-$PluginDirectory = Join-Path $FrozenRuntime "tools\openbabel\plugins"
+$PluginDirectory = Join-Path $FrozenRuntime "tools\openbabel"
 $PackagedPlugins = @(Get-ChildItem $PluginDirectory -Filter "*.obf" -File -ErrorAction Stop)
 if ($PackagedPlugins.Count -eq 0) {
     throw "No packaged Open Babel .obf plugins were found."

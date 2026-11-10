@@ -49,6 +49,13 @@ if obabel is None:
     raise SystemExit("Open Babel obabel.exe was not found in the build environment")
 binaries.append((str(obabel), "tools/openbabel"))
 
+# The Windows build expects its core DLL and .obf modules beside obabel.exe.
+# Preserve that native bin layout instead of relocating modules to a separate
+# directory; the plugin DLL loader otherwise fails even when BABEL_LIBDIR is
+# set and every imported dependency exists elsewhere in the frozen tree.
+for runtime_dll in (library_dir / "bin").glob("openbabel*.dll"):
+    binaries.append((str(runtime_dll), "tools/openbabel"))
+
 plugin_roots = [library_dir / "lib" / "openbabel", library_dir / "bin" / "openbabel"]
 plugin_files = list((library_dir / "bin").glob("*.obf"))
 for plugin_root in plugin_roots:
@@ -58,7 +65,7 @@ for plugin_root in plugin_roots:
 if not plugin_files:
     raise SystemExit("Open Babel format plugins (*.obf) were not found in the build environment")
 for plugin in sorted(set(plugin_files)):
-    binaries.append((str(plugin), "tools/openbabel/plugins"))
+    binaries.append((str(plugin), "tools/openbabel"))
 
 data_root = library_dir / "share" / "openbabel"
 if data_root.is_dir():

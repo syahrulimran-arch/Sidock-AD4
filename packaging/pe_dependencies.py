@@ -23,7 +23,7 @@ def main() -> int:
     root = Path(sys.argv[1]).resolve()
     internal = root / "_internal"
     openbabel = internal / "tools" / "openbabel"
-    targets = [openbabel / "obabel.exe", *(openbabel / "plugins").glob("*.obf")]
+    targets = [openbabel / "obabel.exe", *openbabel.glob("*.obf")]
     available: dict[str, list[Path]] = {}
     for candidate in root.rglob("*"):
         if candidate.is_file():
