@@ -129,7 +129,7 @@ try {
     $env:CONDA_PREFIX = ""
     $env:PATH = "$OpenBabelRoot;$FrozenRuntime;$env:SystemRoot\System32;$env:SystemRoot"
 
-    $RequiredData = @("space-groups.txt", "atomtyp.txt", "bondtyp.txt", "element.txt", "types.txt")
+    $RequiredData = @("space-groups.txt", "atomtyp.txt", "bondtyp.txt", "types.txt")
     foreach ($DataFile in $RequiredData) {
         $DataPath = Join-Path $env:BABEL_DATADIR $DataFile
         if (-not (Test-Path $DataPath -PathType Leaf)) {

@@ -62,7 +62,7 @@ jobs:
           $env:CONDA_PREFIX = ""
           $env:PATH = "$openBabelRoot;$internal;$env:SystemRoot\System32;$env:SystemRoot"
 
-          $requiredData = @("space-groups.txt", "atomtyp.txt", "bondtyp.txt", "element.txt", "types.txt")
+          $requiredData = @("space-groups.txt", "atomtyp.txt", "bondtyp.txt", "types.txt")
           foreach ($dataFile in $requiredData) {
             $dataPath = Join-Path $env:BABEL_DATADIR $dataFile
             if (-not (Test-Path $dataPath -PathType Leaf)) {

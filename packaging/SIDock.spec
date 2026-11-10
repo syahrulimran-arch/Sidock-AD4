@@ -81,7 +81,7 @@ data_root = max(
     (marker.parent for marker in data_markers),
     key=lambda path: sum(1 for child in path.iterdir() if child.is_file()),
 )
-required_data = {"space-groups.txt", "atomtyp.txt", "bondtyp.txt", "element.txt", "types.txt"}
+required_data = {"space-groups.txt", "atomtyp.txt", "bondtyp.txt", "types.txt"}
 available_data = {child.name for child in data_root.iterdir() if child.is_file()}
 missing_data = sorted(required_data - available_data)
 if missing_data:
