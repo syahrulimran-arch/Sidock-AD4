@@ -100,6 +100,10 @@ if (-not (Test-Path $FrozenRuntime)) {
     throw "PyInstaller did not create dist\SIDock\_internal."
 }
 Copy-Item -Force (Join-Path $EnvironmentBin "*.dll") $FrozenRuntime
+# The private Open Babel directory already contains this DLL. Retaining a
+# second copy at _internal makes the Python binding and plugins register with
+# different Open Babel instances, leaving PLIP without formats.
+Remove-Item (Join-Path $FrozenRuntime "openbabel-3.dll") -Force -ErrorAction Stop
 
 $FrozenExecutable = Join-Path $SIDockDist "SIDock.exe"
 if (-not (Test-Path $FrozenExecutable)) {

@@ -63,3 +63,10 @@ def test_openbabel_obf_format_plugins_are_collected():
     assert "Open Babel format plugins (*.obf) were not found" in text
     assert '"tools/openbabel"' in text
     assert '"tools/openbabel/plugins"' not in text
+
+
+def test_build_removes_duplicate_openbabel_core_dll():
+    workflow = (PROJECT_ROOT / ".github" / "workflows" / "build-windows-installer.yml").read_text(encoding="utf-8")
+    build_script = (PROJECT_ROOT / "packaging" / "build_windows.ps1").read_text(encoding="utf-8")
+    assert 'Remove-Item "dist\\SIDock\\_internal\\openbabel-3.dll"' in workflow
+    assert 'Remove-Item (Join-Path $FrozenRuntime "openbabel-3.dll")' in build_script
