@@ -109,12 +109,12 @@ def external_tool_environment() -> dict[str, str]:
     environment = os.environ.copy()
     resource_dir = bundled_resource_dir()
     root = resource_dir / "tools" / "openbabel"
-    data_dir = root / "data"
+    data_dir = bundled_openbabel_data_path(root)
     # Open Babel's MSVC/Conda Windows build installs .obf modules beside the
     # executable and core DLL. Retaining that layout is required for the
     # Windows loader to initialize the modules reliably.
     plugin_dir = root
-    if data_dir.is_dir():
+    if data_dir:
         environment["BABEL_DATADIR"] = str(data_dir) + os.sep
     if plugin_dir.is_dir():
         # Open Babel's Windows plugin loader concatenates this directory with
@@ -136,6 +136,25 @@ def external_tool_environment() -> dict[str, str]:
     if path_entries:
         environment["PATH"] = os.pathsep.join(path_entries + [environment.get("PATH", "")])
     return environment
+
+
+def bundled_openbabel_data_path(root: Path | None = None) -> Path | None:
+    """Return the directory containing Open Babel's chemistry databases.
+
+    Releases already installed in the field may contain either a flat data
+    directory or an extra version directory.  Resolve the marker itself so a
+    harmless packaging-layout change cannot silently break receptor parsing.
+    """
+    root = root or (bundled_resource_dir() / "tools" / "openbabel")
+    direct = root / "data" / "space-groups.txt"
+    if direct.is_file():
+        return direct.parent
+    data_root = root / "data"
+    if data_root.is_dir():
+        matches = sorted(data_root.rglob("space-groups.txt"))
+        if matches:
+            return matches[0].parent
+    return None
 
 
 def configure_bundled_runtime() -> None:

@@ -39,7 +39,7 @@ function Invoke-Checked {
     }
 }
 
-Write-Host "SIDock AD4 0.7.9 installer build" -ForegroundColor Cyan
+Write-Host "SIDock AD4 0.7.10 installer build" -ForegroundColor Cyan
 Write-Host "Project: $ProjectRoot"
 New-Item -ItemType Directory -Path $BuildRoot -Force | Out-Null
 
@@ -129,11 +129,36 @@ try {
     $env:CONDA_PREFIX = ""
     $env:PATH = "$OpenBabelRoot;$FrozenRuntime;$env:SystemRoot\System32;$env:SystemRoot"
 
+    $RequiredData = @("space-groups.txt", "atomtyp.txt", "bondtyp.txt", "element.txt", "types.txt")
+    foreach ($DataFile in $RequiredData) {
+        $DataPath = Join-Path $env:BABEL_DATADIR $DataFile
+        if (-not (Test-Path $DataPath -PathType Leaf)) {
+            throw "Required packaged Open Babel data file is missing: $DataPath"
+        }
+    }
+
     $FormatOutput = & (Join-Path $OpenBabelRoot "obabel.exe") -L formats 2>&1
     $FormatExit = $LASTEXITCODE
     $FormatOutput | Write-Host
     if ($FormatExit -ne 0 -or -not ($FormatOutput -match "(?m)^pdb\s+--") -or -not ($FormatOutput -match "(?m)^pdbqt\s+--")) {
         throw "Packaged obabel cannot load its PDB/PDBQT plugins."
+    }
+
+    $ProbePdb = Join-Path $BuildPath "openbabel-probe.pdb"
+    $ProbePdbqt = Join-Path $BuildPath "openbabel-probe.pdbqt"
+    @'
+ATOM      1  N   ALA A   1      11.104  13.207   9.447  1.00 20.00           N
+ATOM      2  CA  ALA A   1      12.560  13.330   9.280  1.00 20.00           C
+ATOM      3  C   ALA A   1      13.151  12.027   8.748  1.00 20.00           C
+ATOM      4  O   ALA A   1      12.558  10.963   8.918  1.00 20.00           O
+END
+'@ | Set-Content -Path $ProbePdb -Encoding ascii
+    $ConversionOutput = & (Join-Path $OpenBabelRoot "obabel.exe") -ipdb $ProbePdb -opdbqt -O $ProbePdbqt -h --partialcharge gasteiger -xr -xc -xn -xh 2>&1
+    $ConversionExit = $LASTEXITCODE
+    $ConversionOutput | Write-Host
+    $ProbeText = if (Test-Path $ProbePdbqt) { Get-Content $ProbePdbqt -Raw } else { "" }
+    if ($ConversionExit -ne 0 -or $ConversionOutput -match "0 molecules converted|Cannot initialize database" -or $ProbeText -notmatch "(?m)^(ATOM|HETATM)") {
+        throw "Packaged obabel failed a real PDB-to-PDBQT conversion."
     }
 
     $SelfTestOut = Join-Path $BuildPath "sidock-self-test.out"
@@ -177,7 +202,7 @@ if (-not $Iscc) {
 Write-Host "Compiling the Setup EXE..." -ForegroundColor Cyan
 Invoke-Checked $Iscc @($InstallerScript)
 
-$SetupPath = Join-Path $DistPath "installer\SIDock_AD4_Setup_v0.7.9.exe"
+$SetupPath = Join-Path $DistPath "installer\SIDock_AD4_Setup_v0.7.10.exe"
 if (-not (Test-Path $SetupPath)) {
     throw "The installer compiler finished but the expected Setup EXE was not created."
 }

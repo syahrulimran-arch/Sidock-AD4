@@ -5,7 +5,7 @@ import pytest
 
 from sidock.core import (
     box_from_reference, box_from_receptor_residue, bundled_autodock_gpu_runtime_path,
-    clean_receptor_pdb, configure_bundled_runtime, external_tool_environment, parse_dlg, pdbqt_atom_types,
+    bundled_openbabel_data_path, clean_receptor_pdb, configure_bundled_runtime, external_tool_environment, parse_dlg, pdbqt_atom_types,
     safe_stem, write_dpf, prepare_receptor_autodocktools, write_gpf, write_results,
 )
 from sidock.model import DockingParameters, GridBox, Project
@@ -37,10 +37,18 @@ def test_openbabel_environment_paths_have_required_final_separator(monkeypatch, 
     root = tmp_path / "tools" / "openbabel"
     root.mkdir(parents=True)
     (root / "data").mkdir()
+    (root / "data" / "space-groups.txt").write_text("test")
     monkeypatch.setattr("sidock.core.bundled_resource_dir", lambda: tmp_path)
     environment = external_tool_environment()
     assert environment["BABEL_LIBDIR"] == str(root) + os.sep
     assert environment["BABEL_DATADIR"] == str(root / "data") + os.sep
+
+
+def test_openbabel_data_path_supports_version_subdirectory(tmp_path: Path):
+    data = tmp_path / "tools" / "openbabel" / "data" / "3.1.0"
+    data.mkdir(parents=True)
+    (data / "space-groups.txt").write_text("test")
+    assert bundled_openbabel_data_path(tmp_path / "tools" / "openbabel") == data
 
 
 def test_frozen_runtime_registers_openbabel_dll_directory(monkeypatch, tmp_path: Path):

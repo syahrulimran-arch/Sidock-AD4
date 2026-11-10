@@ -1,5 +1,5 @@
 #define MyAppName "SIDock AD4"
-#define MyAppVersion "0.7.9"
+#define MyAppVersion "0.7.10"
 #define MyAppPublisher "Dr Syahrul Imran"
 #define MyAppExeName "SIDock.exe"
 
@@ -15,7 +15,7 @@ DefaultGroupName=SIDock AD4
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=..\..\dist\installer
-OutputBaseFilename=SIDock_AD4_Setup_v0.7.9
+OutputBaseFilename=SIDock_AD4_Setup_v0.7.10
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -27,7 +27,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=yes
 RestartApplications=no
-VersionInfoVersion=0.7.9.0
+VersionInfoVersion=0.7.10.0
 VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#MyAppVersion}
 VersionInfoCompany=Dr Syahrul Imran

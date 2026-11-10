@@ -8,11 +8,11 @@ application, executable, installer, shortcuts, Python package, reports, and
 build system. Projects made with releases under the former DockFlow AD4 name
 remain compatible, and saved tool settings are migrated automatically.
 
-Version 0.7.9 fixes treated-PDB receptor preparation in the installed Windows
-application by packaging Open Babel's `.obf` format plugins and supplying the
-final directory separator required by its Windows plugin loader. Tool checking
-and the frozen-runtime self-test verify that both PDB and PDBQT formats can be
-loaded, preventing an incomplete installer from being published.
+Version 0.7.10 packages Open Babel's complete chemistry database from either
+supported Windows/Conda installation layout. The release gate now requires the
+critical data files and performs a real PDB-to-PDBQT conversion, rejecting a
+zero-molecule result or an uninitialized database before an installer can be
+published. Version 0.7.9 fixed the separate Windows format-plugin loading issue.
 
 Version 0.7.7 adds optional bundled PLIP interaction profiling for the top
 ranked receptor-ligand complexes, downloadable per-ligand 2D interaction maps,
@@ -78,7 +78,7 @@ consensus rank weighted 65%, 25%, and 10%, respectively. Contact counts are
 shown side by side but do not inflate the score. The analysis runs after docking
 and can be rerun for existing DLG files.
 
-Current version: **0.7.9**
+Current version: **0.7.10**
 
 SIDock AD4 is a Windows-friendly Python desktop application for batch virtual screening with AutoGrid4 and either AutoDock4 or optional AutoDock-GPU. It keeps the native AutoDock4 file formats visible while replacing the repetitive command-line workflow with four guided tabs.
 
@@ -111,7 +111,7 @@ SIDock does not modify or redistribute AutoDock executables. Supply `autogrid4.e
 
 ### Normal installer (recommended)
 
-Download `SIDock_AD4_Setup_v0.7.9.exe`, double-click it, and follow the
+Download `SIDock_AD4_Setup_v0.7.10.exe`, double-click it, and follow the
 wizard. The installed application includes Python, PySide6, RDKit, Meeko,
 SciPy, Gemmi, and Open Babel. Conda and manual `pip` commands are not required.
 
@@ -228,7 +228,7 @@ runs the tests, freezes the application, and compiles the setup wizard. The
 finished file is written to:
 
 ```text
-dist\installer\SIDock_AD4_Setup_v0.7.9.exe
+dist\installer\SIDock_AD4_Setup_v0.7.10.exe
 ```
 
 Conda or Miniforge must already be installed for this one-time developer build.

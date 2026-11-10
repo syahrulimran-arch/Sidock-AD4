@@ -67,11 +67,25 @@ if not plugin_files:
 for plugin in sorted(set(plugin_files)):
     binaries.append((str(plugin), "tools/openbabel"))
 
-data_root = library_dir / "share" / "openbabel"
-if data_root.is_dir():
-    version_dirs = [path for path in data_root.iterdir() if path.is_dir()]
-    selected_data = max(version_dirs, default=data_root)
-    datas.append((str(selected_data), "tools/openbabel/data"))
+# Open Babel uses different data layouts depending on how its Windows package
+# was built.  Conda packages have used both Library/share/openbabel/<version>
+# and the native MSVC Library/bin/data layout.  Locate the directory by the
+# database itself instead of assuming either layout, then copy each file to an
+# unambiguous flat runtime directory.
+data_markers = list(library_dir.rglob("space-groups.txt"))
+if not data_markers:
+    raise SystemExit("Open Babel data file space-groups.txt was not found in the build environment")
+data_root = max(
+    (marker.parent for marker in data_markers),
+    key=lambda path: sum(1 for child in path.iterdir() if child.is_file()),
+)
+required_data = {"space-groups.txt", "atomtyp.txt", "bondtyp.txt", "element.txt", "types.txt"}
+available_data = {child.name for child in data_root.iterdir() if child.is_file()}
+missing_data = sorted(required_data - available_data)
+if missing_data:
+    raise SystemExit("Open Babel data directory is incomplete: " + ", ".join(missing_data))
+for data_file in sorted(path for path in data_root.iterdir() if path.is_file()):
+    datas.append((str(data_file), "tools/openbabel/data"))
 
 a = Analysis(
     [str(project_root / "packaging" / "launcher.py")],

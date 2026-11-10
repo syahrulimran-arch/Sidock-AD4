@@ -62,6 +62,14 @@ jobs:
           $env:CONDA_PREFIX = ""
           $env:PATH = "$openBabelRoot;$internal;$env:SystemRoot\System32;$env:SystemRoot"
 
+          $requiredData = @("space-groups.txt", "atomtyp.txt", "bondtyp.txt", "element.txt", "types.txt")
+          foreach ($dataFile in $requiredData) {
+            $dataPath = Join-Path $env:BABEL_DATADIR $dataFile
+            if (-not (Test-Path $dataPath -PathType Leaf)) {
+              throw "Required packaged Open Babel data file is missing: $dataPath"
+            }
+          }
+
           $formatOutput = & (Join-Path $openBabelRoot "obabel.exe") -L formats 2>&1
           $formatExit = $LASTEXITCODE
           $formatOutput | Write-Host
@@ -71,6 +79,26 @@ jobs:
               & $dumpbin.FullName /dependents (Join-Path $pluginDir "formats_common.obf")
             }
             throw "Packaged obabel cannot load its PDB/PDBQT plugins"
+          }
+
+          # Listing formats does not initialize Open Babel's chemistry data.
+          # Perform the exact conversion class used for treated receptors and
+          # reject the zero-molecule false success that escaped v0.7.9.
+          $probePdb = Join-Path $PWD ".build\openbabel-probe.pdb"
+          $probePdbqt = Join-Path $PWD ".build\openbabel-probe.pdbqt"
+          @'
+          ATOM      1  N   ALA A   1      11.104  13.207   9.447  1.00 20.00           N
+          ATOM      2  CA  ALA A   1      12.560  13.330   9.280  1.00 20.00           C
+          ATOM      3  C   ALA A   1      13.151  12.027   8.748  1.00 20.00           C
+          ATOM      4  O   ALA A   1      12.558  10.963   8.918  1.00 20.00           O
+          END
+          '@ | Set-Content -Path $probePdb -Encoding ascii
+          $conversionOutput = & (Join-Path $openBabelRoot "obabel.exe") -ipdb $probePdb -opdbqt -O $probePdbqt -h --partialcharge gasteiger -xr -xc -xn -xh 2>&1
+          $conversionExit = $LASTEXITCODE
+          $conversionOutput | Write-Host
+          $probeText = if (Test-Path $probePdbqt) { Get-Content $probePdbqt -Raw } else { "" }
+          if ($conversionExit -ne 0 -or $conversionOutput -match "0 molecules converted|Cannot initialize database" -or $probeText -notmatch "(?m)^(ATOM|HETATM)") {
+            throw "Packaged obabel failed a real PDB-to-PDBQT conversion"
           }
 
           $selfTestOut = Join-Path $PWD ".build\sidock-self-test.out"
@@ -89,6 +117,6 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: SIDock_AD4_Setup_v0.7.9
-          path: dist/installer/SIDock_AD4_Setup_v0.7.9.exe
+          name: SIDock_AD4_Setup_v0.7.10
+          path: dist/installer/SIDock_AD4_Setup_v0.7.10.exe
           if-no-files-found: error

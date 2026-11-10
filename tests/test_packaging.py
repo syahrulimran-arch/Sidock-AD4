@@ -65,6 +65,22 @@ def test_openbabel_obf_format_plugins_are_collected():
     assert '"tools/openbabel/plugins"' not in text
 
 
+def test_openbabel_data_is_discovered_by_database_marker():
+    text = SPEC_FILE.read_text(encoding="utf-8")
+    assert 'rglob("space-groups.txt")' in text
+    assert '"tools/openbabel/data"' in text
+    assert 'required_data' in text
+
+
+def test_windows_build_runs_real_openbabel_conversion_gate():
+    workflow = (PROJECT_ROOT / ".github" / "workflows" / "build-windows-installer.yml").read_text(encoding="utf-8")
+    build_script = (PROJECT_ROOT / "packaging" / "build_windows.ps1").read_text(encoding="utf-8")
+    for text in (workflow, build_script):
+        assert "space-groups.txt" in text
+        assert "openbabel-probe.pdbqt" in text
+        assert "0 molecules converted" in text
+
+
 def test_build_removes_duplicate_openbabel_core_dll():
     workflow = (PROJECT_ROOT / ".github" / "workflows" / "build-windows-installer.yml").read_text(encoding="utf-8")
     build_script = (PROJECT_ROOT / "packaging" / "build_windows.ps1").read_text(encoding="utf-8")
