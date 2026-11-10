@@ -72,7 +72,9 @@ for plugin in sorted(set(plugin_files)):
 # and the native MSVC Library/bin/data layout.  Locate the directory by the
 # database itself instead of assuming either layout, then copy each file to an
 # unambiguous flat runtime directory.
-data_markers = list(library_dir.rglob("space-groups.txt"))
+# Open Babel 3.2 Conda packages can place data outside ``Library`` even on
+# Windows, so scan the isolated environment rather than one platform prefix.
+data_markers = list(conda_prefix.rglob("space-groups.txt"))
 if not data_markers:
     raise SystemExit("Open Babel data file space-groups.txt was not found in the build environment")
 data_root = max(

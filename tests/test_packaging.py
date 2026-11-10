@@ -67,7 +67,7 @@ def test_openbabel_obf_format_plugins_are_collected():
 
 def test_openbabel_data_is_discovered_by_database_marker():
     text = SPEC_FILE.read_text(encoding="utf-8")
-    assert 'rglob("space-groups.txt")' in text
+    assert 'conda_prefix.rglob("space-groups.txt")' in text
     assert '"tools/openbabel/data"' in text
     assert 'required_data' in text
 
