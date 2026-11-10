@@ -281,7 +281,9 @@ def check_tool_setup(
         except Exception as exc:
             messages.append(f"MISSING: {exc}")
     try:
-        messages.append(f"OK: Open Babel -> {resolve_executable(openbabel, 'Open Babel')}")
+        executable = resolve_executable(openbabel, "Open Babel")
+        verify_openbabel_formats(executable)
+        messages.append(f"OK: Open Babel -> {executable} (PDB/PDBQT formats verified)")
     except Exception as exc:
         messages.append(f"MISSING: {exc} (needed only for treated PDB input)")
     for value, label, module in (
@@ -310,6 +312,27 @@ def check_tool_setup(
         except Exception as exc:
             messages.append(f"MISSING: {label}: {exc}")
     return messages
+
+
+def verify_openbabel_formats(executable: str) -> None:
+    """Require the two format plugins used by treated-receptor conversion."""
+    creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    probe = subprocess.run(
+        [executable, "-L", "formats"], capture_output=True, text=True, timeout=20,
+        creationflags=creationflags, env=external_tool_environment(),
+    )
+    output = "\n".join(part for part in (probe.stdout, probe.stderr) if part)
+    formats = {
+        match.group(1).lower()
+        for match in re.finditer(r"(?m)^\s*([A-Za-z0-9_+-]+)\s+--", output)
+    }
+    missing = sorted({"pdb", "pdbqt"} - formats)
+    if probe.returncode != 0 or missing:
+        detail = f"missing format plugins: {', '.join(missing)}" if missing else f"exit code {probe.returncode}"
+        raise RuntimeError(
+            f"Open Babel cannot load the required PDB/PDBQT plugins ({detail}). "
+            "Reinstall the current SIDock package."
+        )
 
 
 def run_command(

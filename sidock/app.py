@@ -54,7 +54,7 @@ def path_row(line: QLineEdit, browse) -> QWidget:
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("SIDock AD4 0.7.7 — Virtual Screening")
+        self.setWindowTitle("SIDock AD4 0.7.8 — Virtual Screening")
         self.resize(1100, 760)
         self.project: Project | None = None
         self.thread: QThread | None = None
@@ -430,7 +430,7 @@ class MainWindow(QMainWindow):
             self,
             "About SIDock AD4",
             "<h2>SIDock AD4</h2>"
-            "<p><b>Version 0.7.7</b></p>"
+            "<p><b>Version 0.7.8</b></p>"
             "<p>Streamlined Interface for Docking with AutoDock4.</p>"
             "<p>Guided virtual screening and post-docking analysis.</p>"
             "<p><b>Developed by Dr Syahrul Imran</b></p>",

@@ -39,7 +39,7 @@ function Invoke-Checked {
     }
 }
 
-Write-Host "SIDock AD4 0.7.7 installer build" -ForegroundColor Cyan
+Write-Host "SIDock AD4 0.7.8 installer build" -ForegroundColor Cyan
 Write-Host "Project: $ProjectRoot"
 New-Item -ItemType Directory -Path $BuildRoot -Force | Out-Null
 
@@ -132,7 +132,7 @@ if (-not $Iscc) {
 Write-Host "Compiling the Setup EXE..." -ForegroundColor Cyan
 Invoke-Checked $Iscc @($InstallerScript)
 
-$SetupPath = Join-Path $DistPath "installer\SIDock_AD4_Setup_v0.7.7.exe"
+$SetupPath = Join-Path $DistPath "installer\SIDock_AD4_Setup_v0.7.8.exe"
 if (-not (Test-Path $SetupPath)) {
     throw "The installer compiler finished but the expected Setup EXE was not created."
 }

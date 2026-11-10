@@ -49,14 +49,16 @@ if obabel is None:
     raise SystemExit("Open Babel obabel.exe was not found in the build environment")
 binaries.append((str(obabel), "tools/openbabel"))
 
-plugin_roots = [
-    library_dir / "lib" / "openbabel",
-    library_dir / "bin" / "openbabel",
-]
+plugin_roots = [library_dir / "lib" / "openbabel", library_dir / "bin" / "openbabel"]
+plugin_files = list((library_dir / "bin").glob("*.obf"))
 for plugin_root in plugin_roots:
     if plugin_root.is_dir():
-        for plugin in plugin_root.rglob("*.dll"):
-            binaries.append((str(plugin), "tools/openbabel/plugins"))
+        plugin_files.extend(plugin_root.rglob("*.obf"))
+        plugin_files.extend(plugin_root.rglob("*.dll"))
+if not plugin_files:
+    raise SystemExit("Open Babel format plugins (*.obf) were not found in the build environment")
+for plugin in sorted(set(plugin_files)):
+    binaries.append((str(plugin), "tools/openbabel/plugins"))
 
 data_root = library_dir / "share" / "openbabel"
 if data_root.is_dir():

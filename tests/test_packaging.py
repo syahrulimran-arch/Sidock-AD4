@@ -55,3 +55,9 @@ def test_plip_runtime_is_collected_for_the_installer():
     text = SPEC_FILE.read_text(encoding="utf-8")
     assert 'collect_submodules("plip")' in text
     assert 'collect_all("plip")' in text
+
+
+def test_openbabel_obf_format_plugins_are_collected():
+    text = SPEC_FILE.read_text(encoding="utf-8")
+    assert 'glob("*.obf")' in text
+    assert "Open Babel format plugins (*.obf) were not found" in text

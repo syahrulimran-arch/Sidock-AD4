@@ -49,6 +49,7 @@ def packaged_runtime_self_test() -> int:
             bundled_openbabel_path,
             split_and_normalize_ligands,
             validate_ligand_geometry,
+            verify_openbabel_formats,
         )
         from sidock.model import Project
         if (
@@ -59,6 +60,7 @@ def packaged_runtime_self_test() -> int:
             or not callable(PDBComplex)
         ):
             return 1
+        verify_openbabel_formats(str(bundled_openbabel_path()))
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             source = root / "self_test.mol"

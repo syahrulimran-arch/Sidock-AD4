@@ -7,6 +7,7 @@ from sidock.core import (
     BUNDLED_MEEKO, check_tool_setup, command_parts, normalize_meeko_command,
     command_failure_detail, format_process_exit, prepare_ligand, prepare_receptor,
     resolve_executable, run_command, run_meeko,
+    verify_openbabel_formats,
 )
 from sidock.model import GridBox
 
@@ -41,6 +42,20 @@ def test_bundled_openbabel_is_preferred(monkeypatch, tmp_path: Path):
     monkeypatch.setattr("sidock.core.bundled_openbabel_path", lambda: executable)
     assert resolve_executable("Bundled Open Babel", "Open Babel") == str(executable)
     assert resolve_executable("obabel", "Open Babel") == str(executable)
+
+
+def test_openbabel_check_requires_pdb_and_pdbqt_plugins(monkeypatch):
+    class Probe:
+        returncode = 0
+        stdout = "pdb -- Protein Data Bank\npdbqt -- AutoDock PDBQT\n"
+        stderr = ""
+
+    monkeypatch.setattr("sidock.core.subprocess.run", lambda *args, **kwargs: Probe())
+    verify_openbabel_formats("obabel.exe")
+
+    Probe.stdout = "sdf -- MDL SDfile\n"
+    with pytest.raises(RuntimeError, match="missing format plugins: pdb, pdbqt"):
+        verify_openbabel_formats("obabel.exe")
 
 
 def test_automatic_meeko_runs_in_process(monkeypatch, tmp_path: Path):
