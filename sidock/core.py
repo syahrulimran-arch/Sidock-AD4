@@ -35,6 +35,8 @@ LEGACY_MEEKO_WRAPPERS = {
     "mk_prepare_receptor.exe",
     "mk_prepare_receptor.py",
 }
+_DLL_DIRECTORY_HANDLES: list[object] = []
+_REGISTERED_DLL_DIRECTORIES: set[str] = set()
 
 
 def is_frozen() -> bool:
@@ -134,6 +136,27 @@ def external_tool_environment() -> dict[str, str]:
     if path_entries:
         environment["PATH"] = os.pathsep.join(path_entries + [environment.get("PATH", "")])
     return environment
+
+
+def configure_bundled_runtime() -> None:
+    """Configure bundled tools for both this process and child processes.
+
+    Updating PATH is sufficient for a new ``obabel.exe`` child, but modern
+    Windows/Python DLL loading does not reliably consult a PATH changed after
+    the frozen process started. Register the Open Babel and PyInstaller DLL
+    directories explicitly before PLIP imports the Python Open Babel binding.
+    The returned handles must stay alive for the lifetime of the application.
+    """
+    os.environ.update(external_tool_environment())
+    add_directory = getattr(os, "add_dll_directory", None)
+    if not is_frozen() or not callable(add_directory):
+        return
+    resource_dir = bundled_resource_dir()
+    for directory in (resource_dir / "tools" / "openbabel", resource_dir):
+        key = str(directory.resolve())
+        if directory.is_dir() and key not in _REGISTERED_DLL_DIRECTORIES:
+            _DLL_DIRECTORY_HANDLES.append(add_directory(key))
+            _REGISTERED_DLL_DIRECTORIES.add(key)
 
 
 def safe_stem(value: str, fallback: str = "ligand") -> str:

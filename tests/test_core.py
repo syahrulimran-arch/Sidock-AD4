@@ -5,7 +5,7 @@ import pytest
 
 from sidock.core import (
     box_from_reference, box_from_receptor_residue, bundled_autodock_gpu_runtime_path,
-    clean_receptor_pdb, external_tool_environment, parse_dlg, pdbqt_atom_types,
+    clean_receptor_pdb, configure_bundled_runtime, external_tool_environment, parse_dlg, pdbqt_atom_types,
     safe_stem, write_dpf, prepare_receptor_autodocktools, write_gpf, write_results,
 )
 from sidock.model import DockingParameters, GridBox, Project
@@ -41,6 +41,20 @@ def test_openbabel_environment_paths_have_required_final_separator(monkeypatch, 
     environment = external_tool_environment()
     assert environment["BABEL_LIBDIR"] == str(root) + os.sep
     assert environment["BABEL_DATADIR"] == str(root / "data") + os.sep
+
+
+def test_frozen_runtime_registers_openbabel_dll_directory(monkeypatch, tmp_path: Path):
+    root = tmp_path / "tools" / "openbabel"
+    root.mkdir(parents=True)
+    registered = []
+    monkeypatch.setattr("sidock.core.bundled_resource_dir", lambda: tmp_path)
+    monkeypatch.setattr("sidock.core.is_frozen", lambda: True)
+    monkeypatch.setattr(os, "add_dll_directory", lambda path: registered.append(path) or object(), raising=False)
+    monkeypatch.setattr("sidock.core._DLL_DIRECTORY_HANDLES", [])
+    monkeypatch.setattr("sidock.core._REGISTERED_DLL_DIRECTORIES", set())
+    configure_bundled_runtime()
+    configure_bundled_runtime()
+    assert registered == [str(root.resolve()), str(tmp_path.resolve())]
 
 
 def test_pdbqt_atom_types_accepts_openbabel_spacing(tmp_path: Path):

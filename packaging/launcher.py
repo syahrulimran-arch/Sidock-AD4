@@ -102,6 +102,10 @@ def packaged_runtime_self_test() -> int:
 
 if __name__ == "__main__":
     freeze_support()
+    # Register the private Open Babel/DLL locations before PLIP, Meeko, or the
+    # GUI imports scientific modules in this frozen process.
+    from sidock.core import configure_bundled_runtime
+    configure_bundled_runtime()
     if "--self-test" in sys.argv:
         raise SystemExit(packaged_runtime_self_test())
 
