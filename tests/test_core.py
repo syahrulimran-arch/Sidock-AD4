@@ -33,6 +33,16 @@ def test_bundled_gpu_runtime_is_added_to_child_path(monkeypatch, tmp_path: Path)
     assert external_tool_environment()["PATH"].split(os.pathsep)[0] == str(runtime.parent)
 
 
+def test_openbabel_environment_paths_have_required_final_separator(monkeypatch, tmp_path: Path):
+    root = tmp_path / "tools" / "openbabel"
+    (root / "plugins").mkdir(parents=True)
+    (root / "data").mkdir()
+    monkeypatch.setattr("sidock.core.bundled_resource_dir", lambda: tmp_path)
+    environment = external_tool_environment()
+    assert environment["BABEL_LIBDIR"] == str(root / "plugins") + os.sep
+    assert environment["BABEL_DATADIR"] == str(root / "data") + os.sep
+
+
 def test_pdbqt_atom_types_accepts_openbabel_spacing(tmp_path: Path):
     path = tmp_path / "openbabel.pdbqt"
     path.write_text(

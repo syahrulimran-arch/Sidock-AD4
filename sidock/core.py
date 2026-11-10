@@ -110,9 +110,11 @@ def external_tool_environment() -> dict[str, str]:
     data_dir = root / "data"
     plugin_dir = root / "plugins"
     if data_dir.is_dir():
-        environment["BABEL_DATADIR"] = str(data_dir)
+        environment["BABEL_DATADIR"] = str(data_dir) + os.sep
     if plugin_dir.is_dir():
-        environment["BABEL_LIBDIR"] = str(plugin_dir)
+        # Open Babel's Windows plugin loader concatenates this directory with
+        # its *.obf search pattern and requires the final path separator.
+        environment["BABEL_LIBDIR"] = str(plugin_dir) + os.sep
     path_entries: list[str] = []
     gpu_runtime = bundled_autodock_gpu_runtime_path()
     if gpu_runtime:

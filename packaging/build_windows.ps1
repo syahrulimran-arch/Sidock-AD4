@@ -39,7 +39,7 @@ function Invoke-Checked {
     }
 }
 
-Write-Host "SIDock AD4 0.7.8 installer build" -ForegroundColor Cyan
+Write-Host "SIDock AD4 0.7.9 installer build" -ForegroundColor Cyan
 Write-Host "Project: $ProjectRoot"
 New-Item -ItemType Directory -Path $BuildRoot -Force | Out-Null
 
@@ -112,12 +112,42 @@ if ($PackagedPlugins.Count -eq 0) {
     throw "No packaged Open Babel .obf plugins were found."
 }
 Write-Host "Packaged Open Babel plugins: $($PackagedPlugins.Count)"
-$env:BABEL_LIBDIR = ""
-$env:BABEL_DATADIR = ""
-$env:PYTHONPATH = ""
-$env:CONDA_PREFIX = ""
-$env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
-Invoke-Checked $FrozenExecutable @("--self-test")
+$SavedPath = $env:PATH
+$SavedBabelLibDir = $env:BABEL_LIBDIR
+$SavedBabelDataDir = $env:BABEL_DATADIR
+$SavedPythonPath = $env:PYTHONPATH
+$SavedCondaPrefix = $env:CONDA_PREFIX
+try {
+    $OpenBabelRoot = Join-Path $FrozenRuntime "tools\openbabel"
+    $env:BABEL_LIBDIR = $PluginDirectory + "\"
+    $env:BABEL_DATADIR = (Join-Path $OpenBabelRoot "data") + "\"
+    $env:PYTHONPATH = ""
+    $env:CONDA_PREFIX = ""
+    $env:PATH = "$OpenBabelRoot;$FrozenRuntime;$env:SystemRoot\System32;$env:SystemRoot"
+
+    $FormatOutput = & (Join-Path $OpenBabelRoot "obabel.exe") -L formats 2>&1
+    $FormatExit = $LASTEXITCODE
+    $FormatOutput | Write-Host
+    if ($FormatExit -ne 0 -or -not ($FormatOutput -match "(?m)^pdb\s+--") -or -not ($FormatOutput -match "(?m)^pdbqt\s+--")) {
+        throw "Packaged obabel cannot load its PDB/PDBQT plugins."
+    }
+
+    $SelfTestOut = Join-Path $BuildPath "sidock-self-test.out"
+    $SelfTestErr = Join-Path $BuildPath "sidock-self-test.err"
+    $SelfTestProcess = Start-Process -FilePath $FrozenExecutable -ArgumentList "--self-test" -Wait -PassThru -RedirectStandardOutput $SelfTestOut -RedirectStandardError $SelfTestErr
+    if (Test-Path $SelfTestOut) { Get-Content $SelfTestOut }
+    if (Test-Path $SelfTestErr) { Get-Content $SelfTestErr }
+    if ($SelfTestProcess.ExitCode -ne 0) {
+        throw "Packaged runtime self-test failed with exit code $($SelfTestProcess.ExitCode)."
+    }
+}
+finally {
+    $env:PATH = $SavedPath
+    $env:BABEL_LIBDIR = $SavedBabelLibDir
+    $env:BABEL_DATADIR = $SavedBabelDataDir
+    $env:PYTHONPATH = $SavedPythonPath
+    $env:CONDA_PREFIX = $SavedCondaPrefix
+}
 
 $InnoCandidates = @(
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
@@ -143,7 +173,7 @@ if (-not $Iscc) {
 Write-Host "Compiling the Setup EXE..." -ForegroundColor Cyan
 Invoke-Checked $Iscc @($InstallerScript)
 
-$SetupPath = Join-Path $DistPath "installer\SIDock_AD4_Setup_v0.7.8.exe"
+$SetupPath = Join-Path $DistPath "installer\SIDock_AD4_Setup_v0.7.9.exe"
 if (-not (Test-Path $SetupPath)) {
     throw "The installer compiler finished but the expected Setup EXE was not created."
 }
